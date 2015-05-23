@@ -42,7 +42,7 @@ function event_attendees_info()
 		"website"       => "",
 		"author"        => "Mathias Garbe",
 		"authorsite"    => "",
-		"version"       => "1.4",
+		"version"       => "0.1",
 		"codename"      => str_replace('.php', '', basename(__FILE__)),
 		"compatibility" => "18*"
 	);
@@ -70,7 +70,7 @@ function event_attendees_install()
 	$gid = $db->insert_query("settinggroups", $settingsgroup);
 
 	$setting_activate = array(
-		"name"          => "event_active",
+		"name"          => "event_attendees_active",
 		"title"         => "Activate",
 		"description"   => "",
 		"optionscode"   => "yesno",
@@ -79,6 +79,18 @@ function event_attendees_install()
 		"gid"           => (int)$gid,
 	);
 	$db->insert_query("settings", $setting_activate);
+
+	$setting_past_events = array(
+		"name"          => "event_attendees_attend_past",
+		"title"         => "Users can attend past events",
+		"description"   => "",
+		"optionscode"   => "yesno",
+		"value"         => 'no',
+		"disporder"     => '2',
+		"gid"           => (int)$gid,
+	);
+	$db->insert_query("settings", $setting_past_events);
+
 	rebuild_settings();
 }
 
@@ -109,6 +121,12 @@ function event_attendees_activate()
 function event_attendees_deactivate()
 {
 
+}
+
+function event_attendees_is_activated()
+{
+	global $mybb;
+	return ($mybb->settings['event_attendees_active'] == 1);
 }
 
 function event_attendees_check_event($eid)
@@ -212,6 +230,11 @@ function event_attendees_event_end()
 {
 	global $db, $mybb, $edit_event;
 
+	if(!event_attendees_is_activated())
+	{
+		return;
+	}
+
 	$attendees = event_attendees_get_attendees($mybb->input['eid']);
 
 	// Check if user is attending
@@ -248,7 +271,7 @@ function event_attendees_misc_start()
 {
 	global $mybb;
 
-	if($mybb->input['action'] == "edit_attendance" && isset($mybb->input['edit']))
+	if(event_attendees_is_activated() && $mybb->input['action'] == "edit_attendance" && isset($mybb->input['edit']))
 	{
 		print("test");
 		$eid = (int)$mybb->input['eid'];
