@@ -31,18 +31,20 @@ if(!defined("IN_MYBB"))
 require_once MYBB_ROOT."inc/functions_calendar.php";
 
 $plugins->add_hook("calendar_event_end", "event_attendees_event_end");
+$plugins->add_hook("misc_start", "event_attendees_misc_start");
+
 
 function event_attendees_info()
 {	
 	return array(
-		"name"			=> "Event Attendees",
-		"description"	=> "",
-		"website"		=> "",
-		"author"		=> "Mathias Garbe",
-		"authorsite"	=> "",
-		"version"		=> "1.4",
-		"codename"		=> str_replace('.php', '', basename(__FILE__)),
-		"compatibility"	=> "18*"
+		"name"          => "Event Attendees",
+		"description"   => "",
+		"website"       => "",
+		"author"        => "Mathias Garbe",
+		"authorsite"    => "",
+		"version"       => "1.4",
+		"codename"      => str_replace('.php', '', basename(__FILE__)),
+		"compatibility" => "18*"
 	);
 }
 
@@ -59,22 +61,22 @@ function event_attendees_install()
 	PRIMARY KEY (`id`) ) ENGINE=MyISAM {$col}");
 
 	$settingsgroup = array(
-		"title"			=> "Event Attendees",
-		"name"			=> "event_attendees",
-		"description"	=> "",
-		"disporder"		=> "50",
-		"isdefault"		=> "0",
+		"title"         => "Event Attendees",
+		"name"          => "event_attendees",
+		"description"   => "",
+		"disporder"     => "50",
+		"isdefault"     => "0",
 	);
 	$gid = $db->insert_query("settinggroups", $settingsgroup);
 
 	$setting_activate = array(
-		"name"			=> "event_active",
-		"title"			=> "Activate",
-		"description"	=> "",
-		"optionscode"	=> "yesno",
-		"value"			=> 'yes',
-		"disporder"		=> '1',
-		"gid"			=> (int)$gid,
+		"name"          => "event_active",
+		"title"         => "Activate",
+		"description"   => "",
+		"optionscode"   => "yesno",
+		"value"         => 'yes',
+		"disporder"     => '1',
+		"gid"           => (int)$gid,
 	);
 	$db->insert_query("settings", $setting_activate);
 	rebuild_settings();
@@ -226,21 +228,53 @@ function event_attendees_event_end()
 	$text = "<div style=\"text-align: left; vertical-align: bottom;\" class=\"postbit_buttons\">\n";
 	$text .= "<div><b>Teilnehmer (".count($attendees).")</b>: ".implode(', ', array_map(function($val){return $val['username'];}, $attendees))."</div>";
 
+	$url = "misc.php?action=edit_attendance&amp;eid=".$mybb->input['eid']."&amp;my_post_key=".generate_post_check()."&amp;edit=";
 	if(!$attending)
 	{
-		$url = "event_attendees.php?action=edit_attendance&amp;edit=add&amp;eid=".$mybb->input['eid']."&amp;my_post_key=".generate_post_check();
-		$text .= "<a href=\"".$url."\" class=\"postbit_reputation_add\"><span>Teilnehmen</span></a>";
+		$text .= "<a href=\"".$url."add\" class=\"postbit_reputation_add\"><span>Teilnehmen</span></a>";
 	}
 	else
 	{
-		$url = "event_attendees.php?action=edit_attendance&amp;edit=delete&amp;eid=".$mybb->input['eid']."&amp;my_post_key=".generate_post_check();
-		$text .= "<a href=\"".$url."\" class=\"postbit_delete_pm\"><span>Nicht Teilnehmen</span></a>";
+		$text .= "<a href=\"".$url."delete\" class=\"postbit_delete_pm\"><span>Nicht Teilnehmen</span></a>";
 	}
 
 	$text .= "</div>";
 
 	// Prepend html code to template global
 	$edit_event = $text.$edit_event;
+}
+
+function event_attendees_misc_start()
+{
+	global $mybb;
+
+	if($mybb->input['action'] == "edit_attendance" && isset($mybb->input['edit']))
+	{
+		print("test");
+		$eid = (int)$mybb->input['eid'];
+		$edit = $mybb->input['edit'];
+		print($edit);
+
+		if(!verify_post_check($mybb->get_input('my_post_key')))
+		{
+			error("Post key invalid");
+		}
+
+		if($edit == "add")
+		{
+			event_attendees_add_attendance($eid);
+		}
+		else if($edit == "delete")
+		{
+			event_attendees_remove_attendance($eid);
+		}
+		else
+		{
+			error("Did not understand edit action");
+		}
+
+		redirect(get_event_link($eid), "Teilnahme geändert.");
+	}
 }
 
 ?>
