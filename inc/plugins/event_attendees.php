@@ -129,6 +129,30 @@ function event_attendees_is_activated()
 	return ($mybb->settings['event_attendees_active'] == 1);
 }
 
+function event_attendees_can_attend_event($eid)
+{
+	global $mybb, $db;
+
+
+	if($mybb->settings['event_attendees_attend_past'] == 0)
+	{
+		$query = $db->query("
+			SELECT e.*
+			FROM ".TABLE_PREFIX."events e
+			WHERE e.eid='".(int)$eid."'
+		");
+		$event = $db->fetch_array($query);
+
+		$event_time = $event['starttime'] + $event['endtime'];
+		if($event_time < gmmktime())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 function event_attendees_check_event($eid)
 {
 	global $db, $mybb;
@@ -235,7 +259,9 @@ function event_attendees_event_end()
 		return;
 	}
 
-	$attendees = event_attendees_get_attendees($mybb->input['eid']);
+	$eid = (int)$mybb->input['eid'];
+
+	$attendees = event_attendees_get_attendees($eid);
 
 	// Check if user is attending
 	$attending = False;
@@ -247,18 +273,32 @@ function event_attendees_event_end()
 		}
 	}
 
+	$attendees_text = implode(', ', array_map(function($val){return $val['username'];}, $attendees));
+
+	if(count($attendees) == 0)
+	{
+		$attendees_text = "Keiner";
+	}
+
 	// Build html code
 	$text = "<div style=\"text-align: left; vertical-align: bottom;\" class=\"postbit_buttons\">\n";
-	$text .= "<div><b>Teilnehmer (".count($attendees).")</b>: ".implode(', ', array_map(function($val){return $val['username'];}, $attendees))."</div>";
+	$text .= "<div><b>Teilnehmer (".count($attendees).")</b>: ".$attendees_text."</div>";
 
-	$url = "misc.php?action=edit_attendance&amp;eid=".$mybb->input['eid']."&amp;my_post_key=".generate_post_check()."&amp;edit=";
-	if(!$attending)
+	if(event_attendees_can_attend_event($eid))
 	{
-		$text .= "<a href=\"".$url."add\" class=\"postbit_reputation_add\"><span>Teilnehmen</span></a>";
+		$url = "misc.php?action=edit_attendance&amp;eid=".$eid."&amp;my_post_key=".generate_post_check()."&amp;edit=";
+		if(!$attending)
+		{
+			$text .= "<a href=\"".$url."add\" class=\"postbit_reputation_add\"><span>Teilnehmen</span></a>";
+		}
+		else
+		{
+			$text .= "<a href=\"".$url."delete\" class=\"postbit_delete_pm\"><span>Nicht Teilnehmen</span></a>";
+		}
 	}
 	else
 	{
-		$text .= "<a href=\"".$url."delete\" class=\"postbit_delete_pm\"><span>Nicht Teilnehmen</span></a>";
+		$text .= "Die Teilnahme an dieser Veranstaltung kann nicht mehr verändert werden.";
 	}
 
 	$text .= "</div>";
@@ -273,10 +313,13 @@ function event_attendees_misc_start()
 
 	if(event_attendees_is_activated() && $mybb->input['action'] == "edit_attendance" && isset($mybb->input['edit']))
 	{
-		print("test");
 		$eid = (int)$mybb->input['eid'];
 		$edit = $mybb->input['edit'];
-		print($edit);
+
+		if(!event_attendees_can_attend_event($eid))
+		{
+			error("Event can not be attended");
+		}
 
 		if(!verify_post_check($mybb->get_input('my_post_key')))
 		{
