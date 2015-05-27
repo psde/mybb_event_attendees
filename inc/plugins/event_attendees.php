@@ -27,7 +27,6 @@ if(!defined("IN_MYBB"))
 {
     die("This file cannot be accessed directly.");
 }
-
 require_once MYBB_ROOT."inc/functions_calendar.php";
 
 $plugins->add_hook("admin_config_plugins_begin", "event_attendees_rebuild_settings");
@@ -52,7 +51,10 @@ function event_attendees_info()
 function event_attendees_add_settings_if_needed($setting)
 {
 	global $db;
-	if(empty($db->num_rows($db->simple_select("settings", "gid", "name='{$setting["name"]}'"))))
+	$query = $db->simple_select("settings", "gid", "name='".$setting["name"]."'");
+	$numrows = $db->num_rows($query);
+
+	if(!$numrows)
 	{
 		$db->insert_query("settings", $setting);
 	}
@@ -63,8 +65,9 @@ function event_attendees_rebuild_settings()
 	global $db;
 
 	$query = $db->simple_select("settinggroups", "gid", "name='event_attendees'");
+	print_r($query);
 
-	if(empty($db->num_rows($query)))
+	if(!$db->num_rows($query))
 	{
 		$settingsgroup = array(
 			"title"         => "Event Attendees",
@@ -77,7 +80,7 @@ function event_attendees_rebuild_settings()
 	}
 	else
 	{
-		$gid =$db->fetch_array($query)['gid'];
+		$gid = $db->fetch_array($query)['gid'];
 	}
 
 	$setting_activate = array(
