@@ -42,7 +42,7 @@ function event_attendees_info()
 		"website"       => "",
 		"author"        => "Mathias Garbe",
 		"authorsite"    => "",
-		"version"       => "0.3",
+		"version"       => "0.3.1",
 		"codename"      => str_replace('.php', '', basename(__FILE__)),
 		"compatibility" => "18*"
 	);
