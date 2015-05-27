@@ -244,8 +244,6 @@ function event_attendees_get_attendees($eid)
 {
 	global $db;
 
-	event_attendees_check_event($eid);
-
 	$attendees = array();
 
 	// Get all attendees
@@ -361,6 +359,9 @@ function event_attendees_event_end()
 	}
 
 	$eid = (int)$mybb->input['eid'];
+
+	// Check event
+	event_attendees_check_event($eid);
 
 	// Prepend html code to template global
 	$edit_event = event_attendees_build_attendance_html($eid).$edit_event;
