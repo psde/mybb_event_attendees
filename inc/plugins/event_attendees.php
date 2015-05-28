@@ -213,7 +213,7 @@ function event_attendees_validate_calendar($cid)
 
 	// Do we have permission to view this calendar?
 	$calendar_permissions = get_calendar_permissions($calendar['cid']);
-	if($calendar_permissions['canviewcalendar'] != 1 || ($calendar_permissions['canmoderateevents'] != 1 && $event['visible'] == 0))
+	if($calendar_permissions['canviewcalendar'] != 1)
 	{
 		error("Invalid permissions");
 	}
@@ -238,6 +238,12 @@ function event_attendees_check_event($eid)
 	}
 
 	event_attendees_validate_calendar($event['cid']);
+	$calendar_permissions = get_calendar_permissions($calendar['cid']);
+
+	if($calendar_permissions['canmoderateevents'] != 1 && $event['visible'] == 0)
+	{
+		error("Invalid permissions");
+	}
 }
 
 function event_attendees_get_attendees($eid)
