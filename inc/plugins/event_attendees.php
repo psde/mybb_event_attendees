@@ -30,7 +30,6 @@ if(!defined("IN_MYBB"))
 require_once MYBB_ROOT."inc/functions_calendar.php";
 
 $plugins->add_hook("admin_config_plugins_begin", "event_attendees_rebuild_settings");
-$plugins->add_hook("calendar_event_end", "event_attendees_event_end");
 $plugins->add_hook("misc_start", "event_attendees_misc_start");
 $plugins->add_hook("calendar_start", "event_attendees_generate_attendance_info");
 
@@ -156,6 +155,7 @@ function event_attendees_uninstall()
 function event_attendees_activate()
 {
 	require "../inc/adminfunctions_templates.php";
+	find_replace_templatesets("calendar_event", '#(\{\$event[\'description\']\})#i', "{\$event_attendance[\$event['eid']]}$1");
 	find_replace_templatesets("calendar_eventbit", '#(\{\$event\[\'name\'\]\}\</a\>)#i', "$1{\$event_attendance[\$event['eid']]}");
 	find_replace_templatesets("calendar_weekview_day_event", '#(\{\$event\[\'fullname\'\]\}\</a\>)#i', "$1{\$event_attendance[\$event['eid']]}");
 	find_replace_templatesets("calendar_dayview_event", '#(\{\$edit_event\})#i', "{\$event_attendance[\$event['eid']]}$1");
@@ -165,6 +165,7 @@ function event_attendees_activate()
 function event_attendees_deactivate()
 {
 	require "../inc/adminfunctions_templates.php";
+	find_replace_templatesets("calendar_event", '#\{\$event_attendance\[\$event\[\'eid\'\]\]\}#i', "");
 	find_replace_templatesets("calendar_eventbit", '#\{\$event_attendance\[\$event\[\'eid\'\]\]\}#i', "");
 	find_replace_templatesets("calendar_weekview_day_event", '#\{\$event_attendance\[\$event\[\'eid\'\]\]\}#i', "");
 	find_replace_templatesets("calendar_dayview_event", '#\{\$event_attendance\[\$event\[\'eid\'\]\]\}#i', "");
@@ -353,24 +354,6 @@ function event_attendees_build_attendance_html($eid)
 
 	$text .= "</div>";
 	return $text;
-}
-
-function event_attendees_event_end()
-{
-	global $db, $mybb, $edit_event;
-
-	if(!event_attendees_is_activated())
-	{
-		return;
-	}
-
-	$eid = (int)$mybb->input['eid'];
-
-	// Check event
-	event_attendees_check_event($eid);
-
-	// Prepend html code to template global
-	$edit_event = event_attendees_build_attendance_html($eid).$edit_event;
 }
 
 function event_attendees_misc_start()
@@ -576,10 +559,16 @@ function event_attendees_generate_attendance_info()
 	}
 	else
 	{
-		return;
+		$full_functions = true;
 	}
 
 	$events = get_events($calendar, $start_timestamp , $end_timestamp, 1, 1);
+
+	if(count($events) == 0 && $mybb->input['eid'] && (int)$mybb->input['eid'] > 0)
+	{
+		$eid = (int)$mybb->input['eid'];
+		$event_attendance[$eid] = event_attendees_build_attendance_html($eid);
+	}
 
 	foreach ($events as $day) {
 		foreach($day as $event)
